@@ -8,7 +8,7 @@ import click
 from jlcpcb_cli.core.web_client import get_web_client
 from jlcpcb_cli.core.billing import list_billing, get_billing_detail, get_billing_invoice
 from jlcpcb_cli.core.orders import get_order
-from jlcpcb_cli.core.parts import list_inventory
+from jlcpcb_cli.core.parts import list_inventory, parse_attr_filters, search_catalog
 from jlcpcb_cli.core.smt import get_bom, get_usage
 from jlcpcb_cli.core.web_orders import list_orders
 from jlcpcb_cli.core.web_parts import list_parts_orders, get_parts_order
@@ -98,8 +98,73 @@ def orders_usage(batch_num):
 
 @cli.group()
 def parts():
-    """Parts Manager: inventory and order history."""
+    """Parts Manager: catalog search, inventory, and order history."""
     pass
+
+
+@parts.command("search")
+@click.argument("keyword", default="")
+@click.option(
+    "--library-type",
+    type=click.Choice(["all", "basic", "extended"]),
+    default="all",
+    help="Filter by Basic or Extended library type.",
+)
+@click.option("--in-stock", is_flag=True, help="Only show parts currently in stock.")
+@click.option("--min-stock", default=None, type=int, help="Minimum stock count.")
+@click.option("--max-stock", default=None, type=int, help="Maximum stock count.")
+@click.option("--category", default=None, help="Primary category (e.g. Resistors).")
+@click.option(
+    "--subcategory",
+    default=None,
+    help="Subcategory (e.g. 'Chip Resistor - Surface Mount').",
+)
+@click.option("--package", "packages", multiple=True, help="Filter by package/footprint (repeatable).")
+@click.option("--brand", "brands", multiple=True, help="Filter by manufacturer/brand (repeatable).")
+@click.option(
+    "--attr",
+    "attrs",
+    multiple=True,
+    help="Filter by attribute as 'Key=Value' (repeatable, e.g. 'Resistance=10kΩ').",
+)
+@click.option("--limit", default=25, type=int, help="Results per page.")
+@click.option("--page", default=1, type=int, help="Page number.")
+def parts_search(
+    keyword,
+    library_type,
+    in_stock,
+    min_stock,
+    max_stock,
+    category,
+    subcategory,
+    packages,
+    brands,
+    attrs,
+    limit,
+    page,
+):
+    """Search JLCPCB's SMT parts catalog by part number, keyword, or attributes."""
+    try:
+        parsed_attrs = parse_attr_filters(attrs) if attrs else None
+        result = search_catalog(
+            get_web_client(),
+            keyword=keyword,
+            page=page,
+            limit=limit,
+            library_type=library_type,
+            in_stock=in_stock,
+            min_stock=min_stock,
+            max_stock=max_stock,
+            category=category,
+            subcategory=subcategory,
+            packages=list(packages) if packages else None,
+            brands=list(brands) if brands else None,
+            attributes=parsed_attrs,
+        )
+        _output(result)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
 @parts.command("inventory")

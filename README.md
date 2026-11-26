@@ -80,6 +80,16 @@ All money in both commands is in USD, reported as `currency` on each SMT order. 
 
 `consigned` lists stock you shipped to JLCPCB yourself. No observed order has returned a row, so those rows pass through with JLCPCB's own field names and are not counted in `totalFromInventory`.
 
+### Parts catalog search
+
+```bash
+jlcpcb-cli --json parts search C25804
+jlcpcb-cli --json parts search "10k 0603" --library-type basic --in-stock
+jlcpcb-cli --json parts search --category Resistors --subcategory "Chip Resistor - Surface Mount" --package 0603 --attr "Resistance=10kΩ" --attr "Tolerance=±1%"
+```
+
+Searches JLCPCB's full SMT parts catalog by LCSC/manufacturer part number, keyword, category, package, brand, library type (`basic`/`extended`), stock range, and `--attr "Key=Value"` attribute filters.
+
 ### Parts inventory
 
 ```bash
